@@ -1,7 +1,6 @@
 import { Annotation, StateGraph, START, END, MemorySaver } from "@langchain/langgraph";
 import { retrieveCatalogCandidates, CandidateProduct } from "./catalog.agent.js";
 import { evaluateCandidates, RecommendationResult } from "./recommendation.agent.js";
-import { evaluateOfferPolicy } from "./offer.agent.js";
 
 // 1. Define the Graph State
 export const CommerceState = Annotation.Root({
@@ -22,10 +21,6 @@ export const CommerceState = Annotation.Root({
     default: () => null,
   }),
   growthOffer: Annotation<any | null>({
-    reducer: (x, y) => y ?? x,
-    default: () => null,
-  }),
-  policyValidation: Annotation<any | null>({
     reducer: (x, y) => y ?? x,
     default: () => null,
   }),
@@ -66,23 +61,6 @@ async function growthNode(state: typeof CommerceState.State) {
   return { growthOffer: null };
 }
 
-async function offerNode(state: typeof CommerceState.State) {
-  console.log("--> [Offer/Policy Agent] Validating offer boundaries...");
-  const productPrice = state.recommendation?.recommendedProduct?.price 
-    ? Number(state.recommendation.recommendedProduct.price) 
-    : 0;
-
-  const evaluation = await evaluateOfferPolicy(state.growthOffer, productPrice);
-  
-  return { 
-    growthOffer: evaluation.adjustedOffer,
-    policyValidation: {
-      approved: evaluation.approved,
-      reason: evaluation.policyReason
-    }
-  };
-}
-
 async function paymentNode(state: typeof CommerceState.State) {
   console.log("--> [Payment Agent] Halting for user approval...");
   return { needsApproval: true };
@@ -95,14 +73,12 @@ const workflow = new StateGraph(CommerceState)
   .addNode("catalog", catalogNode)
   .addNode("recommendationAgent", recommendationNode)
   .addNode("growth", growthNode)
-  .addNode("offerAgent", offerNode)
   .addNode("payment", paymentNode)
 
   .addEdge(START, "catalog")
   .addEdge("catalog", "recommendationAgent")
   .addEdge("recommendationAgent", "growth")
-  .addEdge("growth", "offerAgent")
-  .addEdge("offerAgent", "payment")
+  .addEdge("growth", "payment")
   .addEdge("payment", END);
 
 // Compile graph with the in-memory checkpointer and breakpoint
