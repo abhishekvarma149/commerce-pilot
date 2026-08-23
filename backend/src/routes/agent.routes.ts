@@ -17,15 +17,17 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
     const result = await runCommerceGraph(message, budget, sessionId);
     
     res.json({
-      success: true,
-      data: {
-        threadId: sessionId,
-        recommendation: result.recommendation,
-        upsell: result.growthOffer,
-        policyCheck: result.policyValidation,
-        requiresApproval: result.needsApproval
-      }
-    });
+  success: true,
+  intent: "product_search",
+  reply: "I found the best match for your request.",
+  data: {
+    threadId: sessionId,
+    recommendation: (result as any).recommendation,
+    upsell: (result as any).growthOffer,
+    policyCheck: (result as any).policyValidation,
+    requiresApproval: (result as any).needsApproval
+  }
+});
   } catch (error) {
     console.error("Agent chat error:", error);
     res.status(500).json({

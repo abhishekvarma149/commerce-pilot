@@ -1,13 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import pool from "../config/db.js";
 
-// Simple in-memory cache for embeddings
+// Simple in-memory cache for embeddings (Query text -> Vector array)
 const embeddingCache = new Map<string, number[]>();
 
 export const generateEmbedding = async (text: string): Promise<number[]> => {
   const sanitizedText = text.trim().toLowerCase();
 
-  // 1. Check local cache first
+  // 1. Check local cache first for lightning-fast responses
   if (embeddingCache.has(sanitizedText)) {
     console.log(`⚡ [Cache Hit] Using cached embedding for: "${text}"`);
     return embeddingCache.get(sanitizedText)!;
@@ -15,6 +15,7 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
+    console.error("❌ CRITICAL: GEMINI_API_KEY is undefined. Check your .env file!");
     throw new Error("Missing Gemini API Key");
   }
 
@@ -23,9 +24,10 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
   
+  // Pass the text string directly to avoid SDK schema version discrepancies
   const result = await model.embedContent(text);
-  
-  // Slice the array down to 768 dimensions to perfectly match PostgreSQL
+
+  // Safely extract values and downsize to 768 dimensions using Matryoshka truncation
   const embedding = result.embedding.values.slice(0, 768);
 
   if (!embedding || embedding.length === 0) {
@@ -43,7 +45,6 @@ export const searchSemantic = async (query: string, maxPrice?: number, limit: nu
   const embedding = await generateEmbedding(query);
   const vectorString = `[${embedding.join(",")}]`;
 
-  // Removed 'quantity' from SELECT list to match your database schema
   let sql = `
     SELECT id, name, description, category, price, currency, specifications, use_cases,
            1 - (embedding <=> $1::vector) AS similarity
@@ -64,7 +65,7 @@ export const searchSemantic = async (query: string, maxPrice?: number, limit: nu
   return result.rows;
 };
 
-// Sync embeddings for products in database (if you use this script)
+// Sync utility for populating database product embeddings
 export const syncAllEmbeddings = async () => {
   const res = await pool.query("SELECT id, name, description, category FROM products WHERE embedding IS NULL");
   console.log(`Syncing embeddings for ${res.rows.length} products...`);
