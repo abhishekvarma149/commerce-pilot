@@ -7,6 +7,7 @@ import productRoutes from "./routes/product.routes";
 import catalogRoutes from "./routes/catalog.routes";
 
 import agentRoutes from "./routes/agent.routes.js";
+import checkoutRoutes from "./routes/checkout.routes.js";
 const app = express();
 
 app.use(cors());
@@ -14,6 +15,9 @@ app.use(express.json());
 // Add this below your existing routes
 app.use("/api/catalog", catalogRoutes);
 
+
+// Mount your checkout routes
+app.use("/api/checkout", checkoutRoutes);
 
 // Add this below your other route registrations:
 app.use("/api/agent", agentRoutes);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowRight,
   Bot,
@@ -44,12 +44,25 @@ const API_URL = "http://localhost:8000";
 function App() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
 
   const [recommendation, setRecommendation] = useState<Product | null>(null);
   const [upsell, setUpsell] = useState<UpsellOffer | null>(null);
+  const [includeUpsell, setIncludeUpsell] = useState(false);
   const [reply, setReply] = useState("");
   const [confidence, setConfidence] = useState(92);
   const [threadId] = useState(`user_session_${Date.now()}`);
+
+  // Dynamically load Razorpay standard checkout script
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   const sendMessage = async () => {
     if (!message.trim() || loading) return;
@@ -73,13 +86,18 @@ function App() {
 
       if (data.success) {
         const { recommendation: recData, upsell: upsellData } = data.data;
-        
+
         if (recData && recData.recommendedProduct) {
           setRecommendation(recData.recommendedProduct);
           setConfidence(Math.round(recData.confidence * 100));
-          setReply(recData.summary || "Here is the best match for your request based on our catalog and policy guidelines.");
+          setReply(
+            recData.summary ||
+              "Here is the best match for your request based on our catalog and policy guidelines."
+          );
         } else {
-          setReply("I processed your request, but couldn't find an exact match in the catalog.");
+          setReply(
+            "I processed your request, but couldn't find an exact match in the catalog."
+          );
           setRecommendation(null);
         }
 
@@ -91,9 +109,64 @@ function App() {
       }
     } catch (error) {
       console.error(error);
-      setReply("Network error. Make sure your backend server is running on port 8000.");
+      setReply(
+        "Network error. Make sure your backend server is running on port 8000."
+      );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (!recommendation) return;
+
+    try {
+      setCheckingOut(true);
+
+      const response = await fetch(`${API_URL}/api/checkout/create-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: recommendation.id,
+          includeUpsell: includeUpsell,
+          userSessionId: threadId,
+        }),
+      });
+
+      const orderData = await response.json();
+
+      if (!orderData.success) {
+        alert(orderData.error || "Failed to initialize payment order.");
+        return;
+      }
+
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount * 100,
+        currency: orderData.currency || "INR",
+        name: "CommercePilot",
+        description: `Order for ${recommendation.name}`,
+        order_id: orderData.orderId,
+        handler: function (res: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) {
+          alert(`Payment successful! Payment ID: ${res.razorpay_payment_id}`);
+        },
+        prefill: {
+          name: "Test Customer",
+          email: "customer@example.com",
+          contact: "9876543210",
+        },
+        theme: {
+          color: "#7658ee",
+        },
+      };
+
+      const razorpayInstance = new (window as any).Razorpay(options);
+      razorpayInstance.open();
+    } catch (error) {
+      console.error("Checkout initiation error:", error);
+      alert("Failed to initiate Razorpay checkout.");
+    } finally {
+      setCheckingOut(false);
     }
   };
 
@@ -214,18 +287,12 @@ function App() {
                 </div>
 
                 <div>
-                  <div className="assistant-name">
-                    CommercePilot
-                  </div>
-                  <div className="assistant-status">
-                    ● Ready to help
-                  </div>
+                  <div className="assistant-name">CommercePilot</div>
+                  <div className="assistant-status">● Ready to help</div>
                 </div>
               </div>
 
-              <div className="thread-id">
-                {threadId.toUpperCase()}
-              </div>
+              <div className="thread-id">{threadId.toUpperCase()}</div>
             </div>
 
             <div className="messages">
@@ -234,9 +301,7 @@ function App() {
                   <Sparkles size={24} />
                 </div>
 
-                <h2>
-                  What are you shopping for?
-                </h2>
+                <h2>What are you shopping for?</h2>
 
                 <p>
                   Tell me what you need in natural language. I'll search the
@@ -257,9 +322,7 @@ function App() {
 
                   <button
                     onClick={() =>
-                      submitExample(
-                        "I need a gaming laptop under ₹70000"
-                      )
+                      submitExample("I need a gaming laptop under ₹70000")
                     }
                   >
                     <Cpu size={15} />
@@ -268,9 +331,7 @@ function App() {
 
                   <button
                     onClick={() =>
-                      submitExample(
-                        "Show me the best phone for photography"
-                      )
+                      submitExample("Show me the best phone for photography")
                     }
                   >
                     <Search size={15} />
@@ -282,9 +343,7 @@ function App() {
               {message && (
                 <div className="user-message">
                   <div className="message-label">YOU</div>
-                  <div className="user-bubble">
-                    {message}
-                  </div>
+                  <div className="user-bubble">{message}</div>
                 </div>
               )}
 
@@ -314,17 +373,13 @@ function App() {
                 <div className="ai-message">
                   <div className="message-label">COMMERCEPILOT</div>
 
-                  <div className="ai-response">
-                    {reply}
-                  </div>
+                  <div className="ai-response">{reply}</div>
                 </div>
               )}
 
               {recommendation && !loading && (
                 <div className="product-result">
-                  <div className="result-label">
-                    BEST MATCH
-                  </div>
+                  <div className="result-label">BEST MATCH</div>
 
                   <div className="product-card">
                     <div className="product-image">
@@ -356,20 +411,24 @@ function App() {
                           View details
                         </button>
 
-                        <button className="primary-button">
-                          Add to cart
+                        <button
+                          className="primary-button"
+                          onClick={handleCheckout}
+                          disabled={checkingOut}
+                        >
+                          {checkingOut ? "Connecting..." : "Add to cart"}
                           <ArrowRight size={16} />
                         </button>
                       </div>
                     </div>
 
                     <div className="product-price">
-                      <div className="price-label">
-                        BEST VALUE
-                      </div>
+                      <div className="price-label">BEST VALUE</div>
 
                       <div className="price">
-                        {recommendation.currency === "INR" ? "₹" : recommendation.currency}
+                        {recommendation.currency === "INR"
+                          ? "₹"
+                          : recommendation.currency}
                         {Number(recommendation.price).toLocaleString("en-IN")}
                       </div>
 
@@ -450,9 +509,7 @@ function App() {
                 </div>
 
                 <div>
-                  <div className="metric-label">
-                    AI-assisted orders
-                  </div>
+                  <div className="metric-label">AI-assisted orders</div>
                   <div className="metric-value">342</div>
                 </div>
 
@@ -465,12 +522,8 @@ function App() {
                 </div>
 
                 <div>
-                  <div className="metric-label">
-                    AI-attributed revenue
-                  </div>
-                  <div className="metric-value">
-                    ₹8.42L
-                  </div>
+                  <div className="metric-label">AI-attributed revenue</div>
+                  <div className="metric-value">₹8.42L</div>
                 </div>
 
                 <span className="positive">+12.7%</span>
@@ -482,12 +535,8 @@ function App() {
                 </div>
 
                 <div>
-                  <div className="metric-label">
-                    Conversion rate
-                  </div>
-                  <div className="metric-value">
-                    18.7%
-                  </div>
+                  <div className="metric-label">Conversion rate</div>
+                  <div className="metric-value">18.7%</div>
                 </div>
 
                 <span className="positive">+4.2%</span>
@@ -502,7 +551,8 @@ function App() {
               </div>
 
               <p>
-                {upsell?.note || "Add a premium accessory to this purchase and save on the bundle."}
+                {upsell?.note ||
+                  "Add a premium accessory to this purchase and save on the bundle."}
               </p>
 
               <div className="offer-product">
@@ -517,12 +567,21 @@ function App() {
 
                   <div className="offer-price">
                     ₹{upsell ? upsell.price : "1,274"}
-                    {upsell?.discountedFrom && <span>₹{upsell.discountedFrom}</span>}
+                    {upsell?.discountedFrom && (
+                      <span>₹{upsell.discountedFrom}</span>
+                    )}
                   </div>
                 </div>
 
-                <button className="mini-add">
-                  Add
+                <button
+                  className="mini-add"
+                  onClick={() => setIncludeUpsell(!includeUpsell)}
+                  style={{
+                    backgroundColor: includeUpsell ? "#10b981" : undefined,
+                    color: includeUpsell ? "#ffffff" : undefined,
+                  }}
+                >
+                  {includeUpsell ? "Added ✓" : "Add"}
                 </button>
               </div>
 
@@ -541,13 +600,9 @@ function App() {
                 </div>
 
                 <div>
-                  <div className="payment-title">
-                    Secure payment flow
-                  </div>
+                  <div className="payment-title">Secure payment flow</div>
 
-                  <div className="payment-subtitle">
-                    Razorpay connected
-                  </div>
+                  <div className="payment-subtitle">Razorpay connected</div>
                 </div>
 
                 <span className="status-dot" />
