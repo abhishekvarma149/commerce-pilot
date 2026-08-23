@@ -197,27 +197,10 @@ CREATE TABLE IF NOT EXISTS agent_actions (
 -- Audit Logs
 CREATE TABLE IF NOT EXISTS audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-    user_id UUID REFERENCES users(id),
-    merchant_id UUID REFERENCES merchants(id),
-
-    actor_type VARCHAR(30) NOT NULL
-        CHECK (
-            actor_type IN (
-                'user',
-                'agent',
-                'system'
-            )
-        ),
-
-    actor_id VARCHAR(255),
-
-    action VARCHAR(100) NOT NULL,
-
-    entity_type VARCHAR(100),
-    entity_id UUID,
-
-    metadata JSONB DEFAULT '{}'::jsonb,
-
+    session_id VARCHAR(255) NOT NULL,
+    order_id VARCHAR(255),
+    action_type VARCHAR(100) NOT NULL,
+    actor VARCHAR(100) NOT NULL,
+    details JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
