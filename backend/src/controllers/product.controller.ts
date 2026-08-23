@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import pool from "../config/db";
+import { buildProductDocument } from "../utils/productDocument";
+import { generateEmbedding } from "../services/catalog.service";
 
 export const createProduct = async (
   req: Request,
@@ -28,18 +30,10 @@ export const createProduct = async (
       return;
     }
 
-    if (Number(price) < 0) {
+    if (Number(price) < 0 || Number(quantity) < 0) {
       res.status(400).json({
         success: false,
-        message: "Price cannot be negative",
-      });
-      return;
-    }
-
-    if (Number(quantity) < 0) {
-      res.status(400).json({
-        success: false,
-        message: "Quantity cannot be negative",
+        message: "Price and Quantity cannot be negative",
       });
       return;
     }
@@ -57,6 +51,24 @@ export const createProduct = async (
       return;
     }
 
+    // Generate Gemini vector embedding for the new product
+    let embeddingVectorString: string | null = null;
+    try {
+      const documentText = buildProductDocument({
+        name,
+        description,
+        category,
+        price,
+        currency,
+        specifications,
+        useCases,
+      });
+      const embedding = await generateEmbedding(documentText);
+      embeddingVectorString = `[${embedding.join(",")}]`;
+    } catch (embErr) {
+      console.warn("⚠️ Warning: Failed to generate embedding on creation:", embErr);
+    }
+
     await client.query("BEGIN");
 
     const productResult = await client.query(
@@ -69,9 +81,10 @@ export const createProduct = async (
         price,
         currency,
         specifications,
-        use_cases
+        use_cases,
+        embedding
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::vector)
       RETURNING *
       `,
       [
@@ -83,6 +96,7 @@ export const createProduct = async (
         currency,
         specifications,
         useCases,
+        embeddingVectorString,
       ]
     );
 
@@ -108,9 +122,7 @@ export const createProduct = async (
     });
   } catch (error) {
     await client.query("ROLLBACK");
-
     console.error("Create product error:", error);
-
     res.status(500).json({
       success: false,
       message: "Failed to create product",
@@ -129,18 +141,14 @@ export const getProducts = async (
 
     const query = merchantId
       ? `
-        SELECT
-          p.*,
-          i.quantity
+        SELECT p.*, i.quantity
         FROM products p
         LEFT JOIN inventory i ON i.product_id = p.id
         WHERE p.merchant_id = $1
         ORDER BY p.created_at DESC
       `
       : `
-        SELECT
-          p.*,
-          i.quantity
+        SELECT p.*, i.quantity
         FROM products p
         LEFT JOIN inventory i ON i.product_id = p.id
         ORDER BY p.created_at DESC
@@ -157,7 +165,6 @@ export const getProducts = async (
     });
   } catch (error) {
     console.error("Get products error:", error);
-
     res.status(500).json({
       success: false,
       message: "Failed to fetch products",
@@ -174,9 +181,7 @@ export const getProduct = async (
 
     const result = await pool.query(
       `
-      SELECT
-        p.*,
-        i.quantity
+      SELECT p.*, i.quantity
       FROM products p
       LEFT JOIN inventory i ON i.product_id = p.id
       WHERE p.id = $1
@@ -198,7 +203,6 @@ export const getProduct = async (
     });
   } catch (error) {
     console.error("Get product error:", error);
-
     res.status(500).json({
       success: false,
       message: "Failed to fetch product",
@@ -214,7 +218,6 @@ export const updateProduct = async (
 
   try {
     const { id } = req.params;
-
     const {
       name,
       description,
@@ -236,7 +239,6 @@ export const updateProduct = async (
 
     if (existing.rows.length === 0) {
       await client.query("ROLLBACK");
-
       res.status(404).json({
         success: false,
         message: "Product not found",
@@ -245,6 +247,32 @@ export const updateProduct = async (
     }
 
     const current = existing.rows[0];
+
+    // Build the updated product details to regenerate the embedding
+    const finalName = name ?? current.name;
+    const finalDescription = description ?? current.description;
+    const finalCategory = category ?? current.category;
+    const finalPrice = price ?? current.price;
+    const finalCurrency = currency ?? current.currency;
+    const finalSpecs = specifications ?? current.specifications;
+    const finalUses = useCases ?? current.use_cases;
+
+    let embeddingVectorString: string | null = null;
+    try {
+      const documentText = buildProductDocument({
+        name: finalName,
+        description: finalDescription,
+        category: finalCategory,
+        price: finalPrice,
+        currency: finalCurrency,
+        specifications: finalSpecs,
+        useCases: finalUses,
+      });
+      const embedding = await generateEmbedding(documentText);
+      embeddingVectorString = `[${embedding.join(",")}]`;
+    } catch (embErr) {
+      console.warn("⚠️ Failed to update embedding:", embErr);
+    }
 
     const productResult = await client.query(
       `
@@ -258,19 +286,21 @@ export const updateProduct = async (
         specifications = $6,
         use_cases = $7,
         is_active = $8,
+        embedding = COALESCE($9::vector, embedding),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $9
+      WHERE id = $10
       RETURNING *
       `,
       [
-        name ?? current.name,
-        description ?? current.description,
-        category ?? current.category,
-        price ?? current.price,
-        currency ?? current.currency,
-        specifications ?? current.specifications,
-        useCases ?? current.use_cases,
+        finalName,
+        finalDescription,
+        finalCategory,
+        finalPrice,
+        finalCurrency,
+        finalSpecs,
+        finalUses,
         isActive ?? current.is_active,
+        embeddingVectorString,
         id,
       ]
     );
@@ -278,19 +308,16 @@ export const updateProduct = async (
     if (quantity !== undefined) {
       if (Number(quantity) < 0) {
         await client.query("ROLLBACK");
-
         res.status(400).json({
           success: false,
           message: "Quantity cannot be negative",
         });
         return;
       }
-
       await client.query(
         `
         UPDATE inventory
-        SET quantity = $1,
-            updated_at = CURRENT_TIMESTAMP
+        SET quantity = $1, updated_at = CURRENT_TIMESTAMP
         WHERE product_id = $2
         `,
         [quantity, id]
@@ -301,9 +328,7 @@ export const updateProduct = async (
 
     const finalResult = await client.query(
       `
-      SELECT
-        p.*,
-        i.quantity
+      SELECT p.*, i.quantity
       FROM products p
       LEFT JOIN inventory i ON i.product_id = p.id
       WHERE p.id = $1
@@ -317,9 +342,7 @@ export const updateProduct = async (
     });
   } catch (error) {
     await client.query("ROLLBACK");
-
     console.error("Update product error:", error);
-
     res.status(500).json({
       success: false,
       message: "Failed to update product",
@@ -359,7 +382,6 @@ export const deleteProduct = async (
     });
   } catch (error) {
     console.error("Delete product error:", error);
-
     res.status(500).json({
       success: false,
       message: "Failed to delete product",
