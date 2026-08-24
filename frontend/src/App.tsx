@@ -22,6 +22,7 @@ import {
 import { GatedCheckoutModal } from "./components/GatedCheckoutModal";
 import { AuditTrailDrawer, type AuditEvent } from "./components/AuditTrailDrawer";
 import "./App.css";
+import { OrdersView } from "./components/OrdersView";
 
 type Product = {
   id: string;
@@ -42,6 +43,7 @@ type UpsellOffer = {
 };
 
 const API_URL = "http://localhost:8000";
+
 
 function App() {
   const [message, setMessage] = useState("");
@@ -72,6 +74,7 @@ function App() {
   // Audit Trail Drawer State
   const [isAuditOpen, setIsAuditOpen] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditEvent[]>([]);
+  const [isOrdersOpen, setIsOrdersOpen] = useState(false);
 
   // Add state:
   const [metrics, setMetrics] = useState({
@@ -123,7 +126,7 @@ function App() {
           setConfidence(Math.round(recData.confidence * 100));
           setReply(
             recData.summary ||
-              "Here is the best match for your request based on our catalog and policy guidelines."
+            "Here is the best match for your request based on our catalog and policy guidelines."
           );
         } else {
           setReply("I processed your request, but couldn't find an exact match in the catalog.");
@@ -271,12 +274,12 @@ function App() {
     try {
       console.log("Fetching audit trail for session:", threadId);
       const res = await fetch(`${API_URL}/api/checkout/audit-trail/${threadId}`);
-      
+
       const data = await res.json();
       console.log("Audit log response from server:", data);
 
-      const logsArray = Array.isArray(data) 
-        ? data 
+      const logsArray = Array.isArray(data)
+        ? data
         : data.logs || data.data || [];
 
       setAuditLogs(logsArray);
@@ -311,7 +314,11 @@ function App() {
             <Package size={18} />
             Products
           </button>
-          <button className="nav-item">
+          <button
+            type="button"
+            className="nav-item"
+            onClick={() => setIsOrdersOpen(true)}
+          >
             <ShoppingBag size={18} />
             Orders
           </button>
@@ -653,6 +660,12 @@ function App() {
         isOpen={isAuditOpen}
         onClose={() => setIsAuditOpen(false)}
         logs={auditLogs}
+      />
+
+      <OrdersView
+        isOpen={isOrdersOpen}
+        onClose={() => setIsOrdersOpen(false)}
+        apiUrl={API_URL}
       />
     </div>
   );
