@@ -14,6 +14,7 @@ import {
   Percent,
   Search,
   Send,
+  Shield,
   ShieldCheck,
   ShoppingBag,
   Sparkles,
@@ -23,6 +24,7 @@ import { GatedCheckoutModal } from "./components/GatedCheckoutModal";
 import { AuditTrailDrawer, type AuditEvent } from "./components/AuditTrailDrawer";
 import "./App.css";
 import { OrdersView } from "./components/OrdersView";
+import { PolicyManagerModal } from "./components/PolicyManagerModal";
 
 type Product = {
   id: string;
@@ -75,6 +77,7 @@ function App() {
   const [isAuditOpen, setIsAuditOpen] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditEvent[]>([]);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
+  const [isPolicyOpen, setIsPolicyOpen] = useState(false);
 
   // Add state:
   const [metrics, setMetrics] = useState({
@@ -322,9 +325,13 @@ function App() {
             <ShoppingBag size={18} />
             Orders
           </button>
-          <button className="nav-item">
+          <button
+            type="button"
+            className="nav-item"
+            onClick={() => setIsPolicyOpen(true)}
+          >
             <Percent size={18} />
-            Offers
+            Offers & Policies
           </button>
           <button className="nav-item">
             <LayoutDashboard size={18} />
@@ -386,7 +393,13 @@ function App() {
             >
               <History size={18} />
             </button>
-            <button type="button" className="icon-button">
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => setIsPolicyOpen(true)}
+              title="Merchant Policy Bounds"
+              style={{ cursor: "pointer" }}
+            >
               <ShieldCheck size={18} />
             </button>
           </div>
@@ -665,6 +678,13 @@ function App() {
       <OrdersView
         isOpen={isOrdersOpen}
         onClose={() => setIsOrdersOpen(false)}
+        apiUrl={API_URL}
+        sessionId={threadId}
+      />
+
+      <PolicyManagerModal
+        isOpen={isPolicyOpen}
+        onClose={() => setIsPolicyOpen(false)}
         apiUrl={API_URL}
       />
     </div>

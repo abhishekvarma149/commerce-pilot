@@ -5,9 +5,10 @@ import pool from "../config/db.js";
 const router = Router();
 
 // 1. Fetch All Orders
-router.get("/", async (_req: Request, res: Response) => {
+router.get("/", async (req: Request, res: Response) => {
     try {
-        const result = await pool.query(`
+        const { sessionId } = req.query;
+        let query = `
       SELECT 
         o.id,
         o.user_session_id,
@@ -22,8 +23,15 @@ router.get("/", async (_req: Request, res: Response) => {
         p.category AS product_category
       FROM orders o
       LEFT JOIN products p ON o.product_id = p.id
-      ORDER BY o.created_at DESC;
-    `);
+    `;
+        const params: any[] = [];
+        if (sessionId) {
+            query += " WHERE o.user_session_id = $1";
+            params.push(sessionId);
+        }
+        query += " ORDER BY o.created_at DESC;";
+
+        const result = await pool.query(query, params);
 
         return res.json({ success: true, orders: result.rows });
     } catch (error: any) {

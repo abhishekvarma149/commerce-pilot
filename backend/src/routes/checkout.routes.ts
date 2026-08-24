@@ -48,7 +48,8 @@ router.post("/preview-breakdown", async (req: Request, res: Response) => {
     const maxAllowedPct = policyQuery.rows.length > 0 ? Number(policyQuery.rows[0].max_discount_pct) : 15;
 
     const requestedDiscountPct = 15;
-    const effectiveDiscountPct = Math.min(requestedDiscountPct, maxAllowedPct);
+    // Apply the active merchant policy percentage directly to the bundle offer
+    const effectiveDiscountPct = maxAllowedPct;
 
     const discountAmount = includeUpsell
       ? Math.round(upsellRawPrice * (effectiveDiscountPct / 100))
