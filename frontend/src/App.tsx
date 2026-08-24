@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowRight,
   Bot,
@@ -72,6 +72,30 @@ function App() {
   // Audit Trail Drawer State
   const [isAuditOpen, setIsAuditOpen] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditEvent[]>([]);
+
+  // Add state:
+  const [metrics, setMetrics] = useState({
+    totalOrders: 0,
+    paidOrders: 0,
+    totalRevenue: 0,
+    conversionRate: "0.0%",
+  });
+
+  const loadMetrics = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/analytics/metrics`);
+      const data = await res.json();
+      if (data.success) {
+        setMetrics(data.metrics);
+      }
+    } catch (err) {
+      console.error("Failed to fetch live signals:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadMetrics();
+  }, [paymentStatus]);
 
   const sendMessage = async (overrideMessage?: string) => {
     const userQuery = overrideMessage || message;
@@ -533,9 +557,8 @@ function App() {
                 </div>
                 <div>
                   <div className="metric-label">AI-assisted orders</div>
-                  <div className="metric-value">342</div>
+                  <div className="metric-value">{metrics.totalOrders}</div>
                 </div>
-                <span className="positive">+18.4%</span>
               </div>
 
               <div className="metric-card">
@@ -544,9 +567,8 @@ function App() {
                 </div>
                 <div>
                   <div className="metric-label">AI-attributed revenue</div>
-                  <div className="metric-value">₹8.42L</div>
+                  <div className="metric-value">₹{metrics.totalRevenue.toLocaleString("en-IN")}</div>
                 </div>
-                <span className="positive">+12.7%</span>
               </div>
 
               <div className="metric-card">
@@ -555,9 +577,8 @@ function App() {
                 </div>
                 <div>
                   <div className="metric-label">Conversion rate</div>
-                  <div className="metric-value">18.7%</div>
+                  <div className="metric-value">{metrics.conversionRate}</div>
                 </div>
-                <span className="positive">+4.2%</span>
               </div>
             </div>
 

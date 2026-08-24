@@ -41,8 +41,14 @@ router.post("/preview-breakdown", async (req: Request, res: Response) => {
     const product = productResult.rows[0];
     const basePrice = Number(product.price);
     const upsellRawPrice = includeUpsell ? 1499 : 0;
+    // Query dynamic rule from database
+    const policyQuery = await pool.query(
+      "SELECT max_discount_pct FROM merchant_policies WHERE policy_name = 'DEFAULT_BUNDLE_POLICY' LIMIT 1"
+    );
+    const maxAllowedPct = policyQuery.rows.length > 0 ? Number(policyQuery.rows[0].max_discount_pct) : 15;
+
     const requestedDiscountPct = 15;
-    const effectiveDiscountPct = 15; // Bounded by policy rule (max allowed = 15%)
+    const effectiveDiscountPct = Math.min(requestedDiscountPct, maxAllowedPct);
 
     const discountAmount = includeUpsell
       ? Math.round(upsellRawPrice * (effectiveDiscountPct / 100))
