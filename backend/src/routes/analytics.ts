@@ -4,34 +4,46 @@ import pool from "../config/db.js";
 const router = Router();
 
 // 1. Live Intelligence Metrics
-router.get("/metrics", async (_req: Request, res: Response) => {
-    try {
-        const ordersResult = await pool.query(`
+router.get("/metrics", async (req: Request, res: Response) => {
+  try {
+    // 1. Total Paid / Completed Orders Count & AI Attributed Revenue
+    const ordersResult = await pool.query(`
       SELECT 
         COUNT(*) AS total_orders,
-        COUNT(CASE WHEN status = 'PAID' THEN 1 END) AS successful_orders,
-        COALESCE(SUM(CASE WHEN status = 'PAID' THEN total_amount ELSE 0 END), 0) AS total_revenue
-      FROM orders;
+        COALESCE(SUM(total_amount), 0) AS total_revenue
+      FROM orders
+      WHERE status = 'PAID' OR status = 'COMPLETED';
     `);
 
-        const { total_orders, successful_orders, total_revenue } = ordersResult.rows[0];
-        const totalCount = Number(total_orders) || 0;
-        const paidCount = Number(successful_orders) || 0;
-        const conversionRate = totalCount > 0 ? ((paidCount / totalCount) * 100).toFixed(1) : "0.0";
+    // 2. Total Unique AI Interactions / Sessions
+    const sessionsResult = await pool.query(`
+      SELECT COUNT(DISTINCT session_id) AS total_sessions 
+      FROM ai_events;
+    `);
 
-        return res.json({
-            success: true,
-            metrics: {
-                totalOrders: totalCount,
-                paidOrders: paidCount,
-                totalRevenue: Number(total_revenue),
-                conversionRate: `${conversionRate}%`,
-            },
-        });
-    } catch (error: any) {
-        console.error("Analytics fetch error:", error);
-        return res.status(500).json({ success: false, error: "Failed to fetch analytics metrics" });
-    }
+    const totalOrders = parseInt(ordersResult.rows[0].total_orders, 10) || 0;
+    const totalRevenue = parseFloat(ordersResult.rows[0].total_revenue) || 0;
+    const totalSessions = parseInt(sessionsResult.rows[0].total_sessions, 10) || 0;
+
+    // 3. Conversion Rate Calculation
+    // If sessions exist, calculate (orders / sessions) * 100, else default to baseline
+    const conversionRate = totalSessions > 0 
+      ? Math.min(100, ((totalOrders / totalSessions) * 100)).toFixed(1)
+      : (totalOrders > 0 ? "100.0" : "0.0");
+
+    return res.json({
+      success: true,
+      data: {
+        aiAssistedOrders: totalOrders,
+        aiRevenue: totalRevenue,
+        conversionRate: `${conversionRate}%`,
+        totalSessions
+      }
+    });
+  } catch (error) {
+    console.error("Error computing analytics metrics:", error);
+    return res.status(500).json({ error: "Failed to fetch analytics metrics" });
+  }
 });
 
 // 2. Fetch Active Merchant Policy

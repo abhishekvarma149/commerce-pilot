@@ -27,11 +27,11 @@ export async function retrieveCatalogCandidates({
   maxPrice,
   limit = 5,
 }: RetrieveCandidatesParams): Promise<CandidateProduct[]> {
-  console.log(`--> [Catalog Agent] Fetching candidates for query: "${query}" (Max Price: ${maxPrice ?? "None"})`);
+
   
   try {
     const products = await searchSemantic(query, maxPrice, limit);
-    console.log(`--> [Catalog Agent] Successfully retrieved ${products.length} products.`);
+
     return products as CandidateProduct[];
   } catch (error) {
     console.error("❌ Error in retrieveCatalogCandidates:", error);

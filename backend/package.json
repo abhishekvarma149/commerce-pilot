@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@google/genai": "^2.18.0",
     "@google/generative-ai": "^0.24.1",
     "@langchain/google-genai": "^2.3.0",
     "@langchain/langgraph-checkpoint-redis": "^1.0.11",

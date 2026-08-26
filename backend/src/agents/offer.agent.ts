@@ -42,7 +42,7 @@ export const evaluateOfferPolicy = async (
   if (discountPercentage > policy.maxDiscountPercentage) {
     const maxAllowedPrice = originalPrice * (1 - policy.maxDiscountPercentage / 100);
     console.log(`⚠️ Policy Violation: Discount exceeds ${policy.maxDiscountPercentage}%. Adjusting price.`);
-    
+
     return {
       approved: true, // Approved with modification
       adjustedOffer: {
