@@ -26,8 +26,10 @@ export const AuditTrailDrawer: React.FC<AuditTrailDrawerProps> = ({
 
   const getBadgeStyle = (actionType: string) => {
     switch (actionType) {
-      case "POLICY_BREAKDOWN_GENERATED":
+      case "CART_POLICY_BREAKDOWN_GENERATED":
         return { bg: "rgba(99, 102, 241, 0.15)", text: "#a5b4fc", border: "rgba(99, 102, 241, 0.3)" };
+      case "POLICY_VIOLATION_BLOCKED":
+        return { bg: "rgba(225, 29, 72, 0.15)", text: "#fda4af", border: "rgba(225, 29, 72, 0.3)" };
       case "PAYMENT_ORDER_CREATED":
         return { bg: "rgba(59, 130, 246, 0.15)", text: "#93c5fd", border: "rgba(59, 130, 246, 0.3)" };
       case "PAYMENT_VERIFIED":
@@ -41,8 +43,10 @@ export const AuditTrailDrawer: React.FC<AuditTrailDrawerProps> = ({
 
   const getActorIcon = (actionType: string) => {
     switch (actionType) {
-      case "POLICY_BREAKDOWN_GENERATED":
+      case "CART_POLICY_BREAKDOWN_GENERATED":
         return <Zap size={14} color="#818cf8" />;
+      case "POLICY_VIOLATION_BLOCKED":
+        return <ShieldAlert size={14} color="#f43f5e" />;
       case "PAYMENT_VERIFIED":
         return <CheckCircle size={14} color="#34d399" />;
       case "RECOVERY_TRIGGERED":
@@ -63,8 +67,8 @@ export const AuditTrailDrawer: React.FC<AuditTrailDrawerProps> = ({
       backdropFilter: "blur(4px)",
     }}>
       <div style={{
-        backgroundColor: "#0d0e17",
-        borderLeft: "1px solid rgba(255, 255, 255, 0.1)",
+        backgroundColor: "#0B0F19",
+        borderLeft: "1px solid #2D3748",
         width: "100%",
         maxWidth: "480px",
         height: "100%",
@@ -77,7 +81,7 @@ export const AuditTrailDrawer: React.FC<AuditTrailDrawerProps> = ({
         {/* Drawer Header */}
         <div style={{
           padding: "20px",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          borderBottom: "1px solid #2D3748",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between"
@@ -127,7 +131,7 @@ export const AuditTrailDrawer: React.FC<AuditTrailDrawerProps> = ({
                 <div key={log.id || index} style={{
                   position: "relative",
                   paddingLeft: "24px",
-                  borderLeft: "2px solid rgba(255, 255, 255, 0.12)",
+                  borderLeft: "2px solid #2D3748",
                 }}>
                   {/* Bullet */}
                   <div style={{
@@ -137,8 +141,8 @@ export const AuditTrailDrawer: React.FC<AuditTrailDrawerProps> = ({
                     width: "14px",
                     height: "14px",
                     borderRadius: "50%",
-                    backgroundColor: "#1e1b4b",
-                    border: "2px solid #818cf8",
+                    backgroundColor: "#1A1F2E",
+                    border: "2px solid #2D3748",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center"
@@ -183,15 +187,15 @@ export const AuditTrailDrawer: React.FC<AuditTrailDrawerProps> = ({
                     {/* Details */}
                     {detailsObj && (
                       <pre style={{
-                        margin: 0,
-                        backgroundColor: "#07080d",
-                        border: "1px solid rgba(255, 255, 255, 0.05)",
+                        marginTop: "12px",
+                        padding: "12px",
+                        backgroundColor: "#1A1F2E",
                         borderRadius: "6px",
-                        padding: "10px",
-                        fontSize: "11px",
-                        color: "#cbd5e1",
-                        overflowX: "auto",
-                        fontFamily: "monospace"
+                        border: "1px solid #2D3748",
+                        fontSize: "12px",
+                        fontFamily: "monospace",
+                        color: "#e2e8f0",
+                        overflowX: "auto"
                       }}>
                         {JSON.stringify(detailsObj, null, 2)}
                       </pre>

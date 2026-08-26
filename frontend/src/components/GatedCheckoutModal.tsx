@@ -23,6 +23,22 @@ interface GatedCheckoutModalProps {
   failureReason?: string;
 }
 
+const T = {
+  bg: "#ffffff",
+  surface: "#f7f8fc",
+  border: "#dde0ea",
+  borderLight: "#eef0f6",
+  textPrimary: "#1a1c2e",
+  textSecondary: "#636880",
+  textMuted: "#8b91a7",
+  blue: "#3b5bff",
+  blueBg: "#eef3ff",
+  blueBorder: "#b5c8ff",
+  green: "#3ecf8e",
+  greenBg: "rgba(62,207,142,0.1)",
+  greenBorder: "rgba(62,207,142,0.25)",
+};
+
 export const GatedCheckoutModal: React.FC<GatedCheckoutModalProps> = ({
   isOpen,
   onClose,
@@ -49,160 +65,144 @@ export const GatedCheckoutModal: React.FC<GatedCheckoutModalProps> = ({
 
   return (
     <div style={{
-      position: "fixed",
-      inset: 0,
-      zIndex: 9999,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "rgba(0, 0, 0, 0.75)",
-      backdropFilter: "blur(6px)",
-      padding: "16px"
+      position: "fixed", inset: 0, zIndex: 9999,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      backgroundColor: "rgba(27,31,59,0.35)",
+      backdropFilter: "blur(6px)", padding: 16
     }}>
       <div style={{
-        backgroundColor: "#13141f",
-        border: "1px solid rgba(255, 255, 255, 0.12)",
-        borderRadius: "16px",
-        width: "100%",
-        maxWidth: "460px",
+        backgroundColor: T.bg,
+        border: `1px solid ${T.border}`,
+        borderRadius: 18,
+        width: "100%", maxWidth: 460,
         overflow: "hidden",
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
-        color: "#f8fafc",
+        boxShadow: "0 24px 64px rgba(27,31,59,0.16)",
         fontFamily: "inherit"
       }}>
         {/* Header */}
         <div style={{
           padding: "16px 20px",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between"
+          borderBottom: `1px solid ${T.borderLight}`,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          background: T.bg
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <ShieldCheck size={20} color="#818cf8" />
-            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>Policy Gated Checkout</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10, background: T.blueBg,
+              display: "flex", alignItems: "center", justifyContent: "center"
+            }}>
+              <ShieldCheck size={18} color={T.blue} />
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: T.textPrimary }}>Policy Gated Checkout</div>
+              <div style={{ fontSize: 10, color: T.textMuted, marginTop: 1 }}>AI-verified order summary</div>
+            </div>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "#94a3b8",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              padding: "4px"
-            }}
-          >
-            <X size={18} />
+          <button onClick={onClose} style={{
+            background: T.surface, border: `1px solid ${T.border}`,
+            borderRadius: 8, width: 30, height: 30,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: T.textMuted, cursor: "pointer"
+          }}>
+            <X size={15} />
           </button>
         </div>
 
         {/* Content Body */}
-        <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 16 }}>
+
           {paymentStatus === "FAILED" ? (
             /* Failure & Recovery */
             <div style={{
-              backgroundColor: "rgba(225, 29, 72, 0.1)",
-              border: "1px solid rgba(225, 29, 72, 0.3)",
-              borderRadius: "12px",
-              padding: "16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "12px"
+              background: "rgba(239,68,68,0.05)",
+              border: "1px solid rgba(239,68,68,0.2)",
+              borderRadius: 12, padding: 16,
+              display: "flex", flexDirection: "column", gap: 12
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#fb7185", fontWeight: 600, fontSize: "14px" }}>
-                <AlertTriangle size={18} />
+              <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#dc2626", fontWeight: 700, fontSize: 14 }}>
+                <AlertTriangle size={17} />
                 <span>Payment Interrupted</span>
               </div>
-              <p style={{ margin: 0, fontSize: "13px", color: "#cbd5e1", lineHeight: 1.4 }}>
+              <p style={{ margin: 0, fontSize: 13, color: T.textSecondary, lineHeight: 1.5 }}>
                 {failureReason || "Transaction was aborted. Your cart and discounted rates remain locked."}
               </p>
               <button
                 disabled={loading}
                 onClick={() => handleAction(onRetryPayment)}
                 style={{
-                  marginTop: "6px",
-                  width: "100%",
-                  padding: "10px 16px",
-                  backgroundColor: "#e11d48",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontWeight: 600,
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px"
+                  marginTop: 4, width: "100%", padding: "11px 16px",
+                  background: "#dc2626", color: "#ffffff", border: "none",
+                  borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  opacity: loading ? 0.7 : 1
                 }}
               >
-                <RefreshCw size={15} className={loading ? "spin" : ""} />
+                <RefreshCw size={15} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
                 Retry Payment (₹{breakdown.finalTotal.toLocaleString("en-IN")})
               </button>
             </div>
+
           ) : paymentStatus === "SUCCESS" ? (
             /* Success State */
             <div style={{
-              backgroundColor: "rgba(16, 185, 129, 0.1)",
-              border: "1px solid rgba(16, 185, 129, 0.3)",
-              borderRadius: "12px",
-              padding: "24px",
-              textAlign: "center"
+              background: T.greenBg, border: `1px solid ${T.greenBorder}`,
+              borderRadius: 14, padding: "28px 20px", textAlign: "center"
             }}>
-              <CheckCircle2 size={40} color="#34d399" style={{ margin: "0 auto 12px" }} />
-              <h4 style={{ margin: "0 0 6px", fontSize: "16px", color: "#6ee7b7", fontWeight: 600 }}>Order Confirmed!</h4>
-              <p style={{ margin: 0, fontSize: "13px", color: "#94a3b8" }}>Payment verified via Razorpay.</p>
+              <div style={{
+                width: 56, height: 56, borderRadius: 16, background: "rgba(62,207,142,0.15)",
+                display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px"
+              }}>
+                <CheckCircle2 size={28} color={T.green} />
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: "#1a5c3a", marginBottom: 6 }}>Order Confirmed!</div>
+              <div style={{ fontSize: 13, color: "#2a9e67" }}>Payment verified via Razorpay.</div>
             </div>
+
           ) : (
             /* Standard Breakdown */
             <>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "14px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", color: "#cbd5e1" }}>
+              {/* Line Items */}
+              <div style={{
+                background: T.surface, border: `1px solid ${T.borderLight}`,
+                borderRadius: 12, padding: "14px 16px",
+                display: "flex", flexDirection: "column", gap: 10, fontSize: 14
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: T.textSecondary }}>
                   <span>{productName}</span>
-                  <span style={{ fontWeight: 600, color: "#ffffff" }}>₹{breakdown.basePrice.toLocaleString("en-IN")}</span>
+                  <span style={{ fontWeight: 700, color: T.textPrimary }}>₹{breakdown.basePrice.toLocaleString("en-IN")}</span>
                 </div>
 
                 {accessoryName && breakdown.upsellPrice > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "#cbd5e1" }}>
-                    <span>{accessoryName} (Add-on)</span>
-                    <span style={{ fontWeight: 600, color: "#ffffff" }}>₹{breakdown.upsellPrice.toLocaleString("en-IN")}</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: T.textSecondary }}>
+                    <span>{accessoryName} <span style={{ fontSize: 11, color: T.blue, background: T.blueBg, padding: "1px 6px", borderRadius: 100 }}>Add-on</span></span>
+                    <span style={{ fontWeight: 700, color: T.textPrimary }}>₹{breakdown.upsellPrice.toLocaleString("en-IN")}</span>
                   </div>
                 )}
 
                 {breakdown.discountAmount > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "#34d399" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#2a9e67", fontWeight: 600 }}>
                     <span>Bounded Discount ({breakdown.effectiveDiscountPct}%)</span>
-                    <span>-₹{breakdown.discountAmount.toLocaleString("en-IN")}</span>
+                    <span>−₹{breakdown.discountAmount.toLocaleString("en-IN")}</span>
                   </div>
                 )}
 
                 <div style={{
-                  borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-                  paddingTop: "12px",
-                  marginTop: "4px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "15px",
-                  fontWeight: 700
+                  borderTop: `1px solid ${T.border}`, paddingTop: 12, marginTop: 2,
+                  display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800,
+                  color: T.textPrimary
                 }}>
                   <span>Final Authorized Total</span>
-                  <span style={{ color: "#a5b4fc" }}>₹{breakdown.finalTotal.toLocaleString("en-IN")}</span>
+                  <span style={{ color: T.blue }}>₹{breakdown.finalTotal.toLocaleString("en-IN")}</span>
                 </div>
               </div>
 
               {/* Policy Decision Banner */}
               <div style={{
-                backgroundColor: "rgba(99, 102, 241, 0.12)",
-                border: "1px solid rgba(99, 102, 241, 0.3)",
-                borderRadius: "8px",
-                padding: "10px 14px",
-                fontSize: "12px",
-                color: "#c7d2fe",
-                lineHeight: 1.4
+                background: T.blueBg, border: `1px solid ${T.blueBorder}`,
+                borderRadius: 10, padding: "10px 14px",
+                fontSize: 12, color: "#2d47e8", lineHeight: 1.5
               }}>
-                <strong>Policy Engine Decision:</strong> {breakdown.explanation}
+                <strong>Policy Engine:</strong> {breakdown.explanation}
               </div>
 
               {/* Approval Button */}
@@ -210,24 +210,18 @@ export const GatedCheckoutModal: React.FC<GatedCheckoutModalProps> = ({
                 disabled={loading}
                 onClick={() => handleAction(onConfirmPayment)}
                 style={{
-                  width: "100%",
-                  padding: "12px",
-                  backgroundColor: "#7658ee",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: "10px",
-                  fontWeight: 600,
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  boxShadow: "0 4px 14px rgba(118, 88, 238, 0.35)",
-                  transition: "opacity 0.2s"
+                  width: "100%", padding: "13px",
+                  background: T.blue, color: "#ffffff",
+                  border: "none", borderRadius: 12,
+                  fontWeight: 700, fontSize: 14, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  boxShadow: "0 4px 16px rgba(59,91,255,0.3)",
+                  opacity: loading ? 0.75 : 1, transition: "opacity 0.2s"
                 }}
               >
-                {loading ? <RefreshCw size={16} className="spin" /> : "Approve & Pay with Razorpay"}
+                {loading
+                  ? <RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} />
+                  : "Approve & Pay with Razorpay"}
               </button>
             </>
           )}
