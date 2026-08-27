@@ -9,6 +9,13 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey || "");
 
+/**
+ * Evaluates the appropriate discount to offer based on the user's conversational intent.
+ * 
+ * Why: High-intent users might purchase anyway, so offering a smaller discount protects
+ * margins. Hesitant users might need a larger incentive to convert. This function calls
+ * the LLM to analyze intent and returns a suggested discount percentage.
+ */
 export async function evaluateGrowthOffer(userMessage: string): Promise<number> {
   if (!apiKey) return 15; // Fallback
 

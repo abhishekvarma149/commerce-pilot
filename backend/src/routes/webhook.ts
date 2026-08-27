@@ -4,8 +4,15 @@ import pool from "../config/db.js";
 
 const router = Router();
 
-// Asynchronous Razorpay Server-to-Server Webhook
-
+/**
+ * Razorpay Webhook Handler
+ * 
+ * Why: This route receives async payment notifications from Razorpay.
+ * - Security (HMAC): We cryptographically verify the x-razorpay-signature against the raw body 
+ *   using our webhook secret to ensure the request is authentically from Razorpay.
+ * - Idempotency: Webhooks can be delivered multiple times. The UPDATE queries are idempotent,
+ *   meaning they can safely run multiple times for the same order without adverse side effects.
+ */
 router.post("/razorpay", async (req: Request, res: Response) => {
     try {
         const signature = req.headers["x-razorpay-signature"] as string;
@@ -83,7 +90,7 @@ router.post("/razorpay", async (req: Request, res: Response) => {
         return res.status(200).json({ status: "ok" });
     } catch (err: any) {
         console.error("Webhook processing error:", err);
-        return res.status(500).json({ success: false, error: "Webhook handling failed" });
+        return res.status(500).json({ success: false, error: "Webhook handling failed", details: err.message });
     }
 });
 

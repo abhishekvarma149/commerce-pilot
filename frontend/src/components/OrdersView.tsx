@@ -38,17 +38,22 @@ const T = {
 export const OrdersView: React.FC<OrdersViewProps> = ({ isOpen, onClose, apiUrl, sessionId, onRetryOrder }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
+      setError(null);
       const endpoint = sessionId 
         ? `${apiUrl}/api/orders?sessionId=${sessionId}` 
         : `${apiUrl}/api/orders`;
 
       fetch(endpoint)
-        .then((res) => res.json())
-        .then((data) => { if (data.success) setOrders(data.orders); })
-        .catch((err) => console.error("Failed to load orders:", err))
+        .then((res) => {
+          if (!res.ok) throw new Error("Network response was not ok");
+          return res.json();
+        })
+        .then((data) => { if (data.success) setOrders(data.orders); else setError("Failed to load orders."); })
+        .catch(() => setError("Failed to load orders."))
         .finally(() => setLoading(false));
     }
   }, [isOpen, apiUrl, sessionId]);
@@ -121,6 +126,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ isOpen, onClose, apiUrl,
           {loading ? (
             <div style={{ textAlign: "center", color: T.textMuted, padding: "40px 0", fontSize: 13 }}>
               Loading orders...
+            </div>
+          ) : error ? (
+            <div style={{ textAlign: "center", color: "#dc2626", padding: "40px 0", fontSize: 13 }}>
+              {error}
             </div>
           ) : orders.length === 0 ? (
             <div style={{ textAlign: "center", padding: "48px 0" }}>

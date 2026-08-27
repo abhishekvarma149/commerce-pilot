@@ -1,5 +1,8 @@
 import express from "express";
 import cors from "cors";
+import session from 'express-session';
+import { RedisStore } from 'connect-redis';
+import { createClient } from 'redis';
 
 import merchantRoutes from "./routes/merchant.routes";
 import productRoutes from "./routes/product.routes";
@@ -13,6 +16,19 @@ import ordersRouter from "./routes/orders.js";
 const app = express();
 
 app.use(cors());
+
+// 1. Initialize Redis Client
+const redisClient = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
+redisClient.connect().catch(console.error);
+
+// 2. Use Redis for Sessions
+app.use(session({
+  store: new RedisStore({ client: redisClient }),
+  secret: process.env.SESSION_SECRET || 'commercepilot_session_secret_2026',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 } // 1 day
+}));
 
 // Capture raw body for HMAC cryptographic verification in Razorpay webhooks
 app.use(

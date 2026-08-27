@@ -1,15 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  getActiveThreadId,
-  getSavedSessions,
-  saveSessionMeta,
-  setActiveThread,
-  createNewSession,
-  deleteSession,
-  type ChatSession,
-} from "./utils/sessionHistory";
-import { ChatHistoryDrawer } from "./components/ChatHistoryDrawer";
-import {
   Bot,
   Check,
   CheckCircle,
@@ -18,7 +8,6 @@ import {
   CreditCard,
   Cpu,
   History,
-  LayoutDashboard,
   MessageCircle,
   Minus,
   Package,
@@ -33,13 +22,25 @@ import {
   Trash2,
   Zap,
 } from "lucide-react";
+
+import {
+  getActiveThreadId,
+  getSavedSessions,
+  saveSessionMeta,
+  setActiveThread,
+  createNewSession,
+  deleteSession,
+  type ChatSession,
+} from "./utils/sessionHistory";
+import { ChatHistoryDrawer } from "./components/ChatHistoryDrawer";
 import { GatedCheckoutModal } from "./components/GatedCheckoutModal";
 import { AuditTrailDrawer, type AuditEvent } from "./components/AuditTrailDrawer";
-import "./App.css";
 import { OrdersView } from "./components/OrdersView";
 import { PolicyManagerModal } from "./components/PolicyManagerModal";
 import { CartDrawer, type CartItem } from "./components/CartDrawer";
 import { ProductsView } from "./components/ProductsView";
+
+import "./App.css";
 
 type Product = {
   id: string;
@@ -60,9 +61,23 @@ type UpsellOffer = {
   discountPct?: number;
 };
 
+type ChatMessage = {
+  role: string;
+  text: string;
+  product?: Product;
+  confidence?: number;
+  id?: string;
+};
+
+type AddToCartProduct = {
+  id: string;
+  name: string;
+  category?: string;
+  price: number | string;
+  discountPct?: number;
+};
+
 const API_URL = "http://localhost:8000";
-
-
 function App() {
   const [threadId, setThreadId] = useState<string>(() => getActiveThreadId());
   const [sessions, setSessions] = useState<ChatSession[]>(() => getSavedSessions());
@@ -85,7 +100,7 @@ function App() {
   const [includeUpsell, setIncludeUpsell] = useState(false);
   const [reply, setReply] = useState(() => initialSaved?.reply || "");
   const [confidence, setConfidence] = useState(() => initialSaved?.confidence || 92);
-  const [messages, setMessages] = useState<{ role: string, text: string }[]>(() => {
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
       const saved = localStorage.getItem(`commercepilot_messages_${threadId}`);
       return saved ? JSON.parse(saved) : [];
@@ -140,8 +155,6 @@ function App() {
         setMetrics(data.data);
       }
     } catch (err) {
-      console.error(err);
-
       const errorObj = { role: "assistant", text: "Sorry, I encountered an error. Please try again." };
       setMessages((prev) => {
         const updated = [...prev, errorObj];
@@ -198,7 +211,7 @@ function App() {
     }
   };
 
-  const handleAddToCart = (product: any, isAccessory = false, openCart = true) => {
+  const handleAddToCart = (product: AddToCartProduct, isAccessory = false, openCart = true) => {
     setCartItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
@@ -361,7 +374,7 @@ function App() {
         if (recData && recData.summary) {
           setReply(recData.summary);
 
-          const aiMessageObj: any = { role: "assistant", text: recData.summary };
+          const aiMessageObj: ChatMessage = { role: "assistant", text: recData.summary };
 
           // Attach product to the message if it's newly recommended
           if (recData.recommendedProduct) {
@@ -402,7 +415,6 @@ function App() {
         setReply("Something went wrong. Please try again.");
       }
     } catch (error) {
-      console.error(error);
       setReply("Network error. Make sure your backend server is running on port 8000.");
     } finally {
       setLoading(false);
@@ -452,7 +464,7 @@ function App() {
   };
 
   // 2. Razorpay Trigger with ondismiss and payment.failed Listeners
-  const handleRazorpayPayment = async (orderData: any) => {
+  const handleRazorpayPayment = async (orderData: { amount: number; currency: string; orderId: string; keyId: string; }) => {
     const envKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
     const resolvedKey = (envKey && envKey !== "undefined") ? envKey : orderData.keyId;
 
@@ -463,7 +475,7 @@ function App() {
       name: "CommercePilot",
       description: `Order for ${recommendation?.name || "Product"}`,
       order_id: orderData.orderId,
-      handler: async function (response: any) {
+      handler: async function (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string; }) {
         setPaymentStatus("SUCCESS");
 
         const verifyRes = await fetch(`${API_URL}/api/checkout/verify`, {
@@ -487,7 +499,7 @@ function App() {
             role: "assistant",
             text: `Payment Confirmed! 🎉 Your order for ₹${orderData.amount / 100} has been successfully paid and your items are secured. You can view your invoice anytime from the Orders section.`,
           };
-          setMessages((prev: any) => {
+          setMessages((prev) => {
             const next = [...prev, injection];
             localStorage.setItem(`commercepilot_messages_${threadId}`, JSON.stringify(next));
             return next;
@@ -503,7 +515,6 @@ function App() {
       },
       modal: {
         ondismiss: function () {
-          console.warn("Payment dismissed / aborted.");
           setPaymentStatus("FAILED");
           setFailureReason("Transaction was closed before authorization was complete.");
           // We DO NOT release the reservation or mark as FAILED in the database immediately.
@@ -515,8 +526,7 @@ function App() {
 
     const rzp = new (window as any).Razorpay(options);
 
-    rzp.on("payment.failed", async function (response: any) {
-      console.error("Payment failed:", response.error);
+    rzp.on("payment.failed", async function (response: { error: { description: string } }) {
       setPaymentStatus("FAILED");
       setFailureReason(response.error.description || "Payment authorization failed.");
 
@@ -527,7 +537,7 @@ function App() {
           body: JSON.stringify({ razorpay_order_id: orderData.orderId }),
         });
       } catch (err) {
-        console.error("Failed to release lock on payment failure:", err);
+        // Silently handle lock release failure on client
       }
 
       await fetch(`${API_URL}/api/checkout/recover-failed-payment`, {
@@ -580,7 +590,6 @@ function App() {
         alert(orderData.error || "Order creation failed.");
       }
     } catch (err) {
-      console.error("Order initiation error:", err);
       alert("Failed to connect to checkout service.");
     }
   };
@@ -601,7 +610,6 @@ function App() {
           setIsAuditOpen(true);
         }
       } catch (err) {
-        console.error("Failed to load audit logs:", err);
         setAuditLogs([]);
         if (!silent) {
           setIsAuditOpen(true);
@@ -656,10 +664,7 @@ function App() {
             <Percent size={18} />
             Offers & Policies
           </button>
-          <button className="nav-item">
-            <LayoutDashboard size={18} />
-            Analytics
-          </button>
+
         </nav>
 
         <div className="sidebar-bottom">
@@ -829,7 +834,7 @@ function App() {
               </div>
 
               {/* Chat Thread */}
-              {messages.map((msg: any, idx: number) => (
+              {messages.map((msg: ChatMessage, idx: number) => (
                 <div key={idx} className={msg.role === "user" ? "user-message" : "ai-message"}>
                   <div className="message-label">{msg.role === "user" ? "YOU" : "COMMERCEPILOT"}</div>
                   <div className={msg.role === "user" ? "user-bubble" : "ai-response"}>{msg.text}</div>
@@ -899,7 +904,7 @@ function App() {
                               return (
                                 <button
                                   type="button"
-                                  onClick={() => handleAddToCart(msg.product, false)}
+                                  onClick={() => msg.product && handleAddToCart(msg.product as unknown as AddToCartProduct, false, true)}
                                   className="secondary-button"
                                 >
                                   + Add to Cart
@@ -1191,7 +1196,6 @@ function App() {
                 body: JSON.stringify({ sessionId: threadId, orderId: currentOrderId }),
               });
             } catch (err) {
-              console.error(err);
             }
 
             const orderTotal = breakdown.finalTotal.toLocaleString("en-IN");
@@ -1201,7 +1205,7 @@ function App() {
               text: `I noticed you stepped away from checkout. Your locked price of ₹${orderTotal} is held in PAYMENT_PENDING for 15 minutes. You can review and retry your purchase anytime from the Orders section.`,
             };
 
-            setMessages((prev: any) => [...prev, injection]);
+            setMessages((prev) => [...prev, injection]);
             localStorage.setItem(`commercepilot_messages_${threadId}`, JSON.stringify([...messages, injection]));
 
             setPaymentStatus("IDLE");
@@ -1237,7 +1241,7 @@ function App() {
         onClose={() => setIsOrdersOpen(false)}
         apiUrl={API_URL}
         sessionId={threadId}
-        onRetryOrder={async (order: any) => {
+        onRetryOrder={async (order: { razorpay_order_id?: string; id: string | number; total_amount: number | string; currency: string; }) => {
           setIsOrdersOpen(false);
           setCurrentOrderId(order.razorpay_order_id || String(order.id));
           
@@ -1248,7 +1252,6 @@ function App() {
               const config = await res.json();
               keyId = config.keyId;
             } catch (err) {
-              console.error("Failed to fetch Razorpay config:", err);
             }
           }
           
@@ -1257,7 +1260,7 @@ function App() {
           }
 
           const orderData = {
-            orderId: order.razorpay_order_id,
+            orderId: order.razorpay_order_id || String(order.id),
             amount: Number(order.total_amount) * 100,
             currency: order.currency || "INR",
             keyId

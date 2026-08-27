@@ -92,9 +92,9 @@ router.post("/preview-breakdown", async (req: Request, res: Response) => {
     }
 
     return res.json({ success: true, breakdown, product });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Breakdown preview error:", error);
-    return res.status(500).json({ success: false, error: "Failed to generate breakdown" });
+    return res.status(500).json({ success: false, error: "Failed to generate breakdown", details: error.message });
   }
 });
 
@@ -171,7 +171,14 @@ router.post("/create-order", async (req: Request, res: Response) => {
 
     const razorpayOrder = await createRazorpayOrder(amountInPaise, receiptId);
 
-    // 3. Acquire TTL Lock for 15 minutes
+    /**
+     * Acquire Inventory TTL Lock (15 Minutes)
+     * 
+     * Why: Prevents double-spending and overselling. When a user begins checkout,
+     * the stock is temporarily reserved. If they abandon the cart or payment fails,
+     * the cron job will automatically release this lock after 15 minutes, making
+     * the inventory available for other shoppers without manual intervention.
+     */
     await pool.query(
       `INSERT INTO inventory_locks (product_id, session_id, razorpay_order_id, quantity, expires_at)
        VALUES ($1, $2, $3, 1, CURRENT_TIMESTAMP + INTERVAL '15 minutes');`,
@@ -209,9 +216,9 @@ router.post("/create-order", async (req: Request, res: Response) => {
       currency: "INR",
       keyId: process.env.RAZORPAY_KEY_ID,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Checkout order error:", error);
-    return res.status(500).json({ success: false, error: "Internal server error during checkout creation" });
+    return res.status(500).json({ success: false, error: "Internal server error during checkout creation", details: error.message });
   }
 });
 
@@ -276,9 +283,9 @@ router.post("/verify", async (req: Request, res: Response) => {
     }
 
     return res.json({ success: true, message: "Payment verified successfully" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Payment verification error:", error);
-    return res.status(500).json({ success: false, error: "Verification failed" });
+    return res.status(500).json({ success: false, error: "Verification failed", details: error.message });
   }
 });
 
@@ -319,9 +326,9 @@ router.post("/recover-failed-payment", async (req: Request, res: Response) => {
         message: "Your cart and locked pricing are preserved. You can retry with a different method.",
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Recovery handler error:", error);
-    return res.status(500).json({ success: false, error: "Recovery process failed" });
+    return res.status(500).json({ success: false, error: "Recovery process failed", details: error.message });
   }
 });
 
@@ -363,7 +370,8 @@ router.post("/cancel-reservation", async (req: Request, res: Response) => {
     }
     return res.json({ success: true });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: "Failed to release lock" });
+    console.error("Cancel reservation error:", err);
+    return res.status(500).json({ success: false, error: "Failed to release lock", details: err.message });
   }
 });
 
@@ -444,9 +452,9 @@ router.post("/preview-cart-breakdown", async (req: Request, res: Response) => {
     }
 
     return res.json({ success: true, breakdown });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Cart breakdown preview error:", error);
-    return res.status(500).json({ success: false, error: "Internal server error" });
+    return res.status(500).json({ success: false, error: "Internal server error", details: error.message });
   }
 });
 
@@ -545,7 +553,13 @@ router.post("/checkout-cart", async (req: Request, res: Response) => {
       [userSessionId || "default_session", mainItem.isAccessory ? null : mainItem.id, totalAmount, razorpayOrder.id, idempotencyKey]
     );
 
-    // 5. Acquire TTL Locks for each catalog product in the cart
+    /**
+     * Acquire TTL Locks for each catalog product in the cart
+     * 
+     * Why: We iterate over each valid catalog item in the cart and place a 15-minute
+     * reservation lock. This ensures that while the user is completing the Razorpay
+     * transaction, the items cannot be bought by someone else, preserving cart integrity.
+     */
     for (const item of items) {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id);
       if (isUuid) {
@@ -558,7 +572,7 @@ router.post("/checkout-cart", async (req: Request, res: Response) => {
                ON CONFLICT (razorpay_order_id) DO NOTHING;`,
               [item.id, userSessionId || "default_session", razorpayOrder.id, item.quantity]
             );
-          } catch (e) {
+          } catch (e: any) {
             console.error("Lock error:", e);
           }
         }
@@ -572,9 +586,9 @@ router.post("/checkout-cart", async (req: Request, res: Response) => {
       currency: "INR",
       keyId: process.env.RAZORPAY_KEY_ID,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Cart checkout error:", error);
-    return res.status(500).json({ success: false, error: "Internal server error during cart checkout" });
+    return res.status(500).json({ success: false, error: "Internal server error during cart checkout", details: error.message });
   }
 });
 
@@ -636,9 +650,9 @@ router.post("/verify-cart", async (req: Request, res: Response) => {
     }
 
     return res.json({ success: true, message: "Cart payment verified and inventory updated" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Cart verification error:", error);
-    return res.status(500).json({ success: false, error: "Cart verification failed" });
+    return res.status(500).json({ success: false, error: "Cart verification failed", details: error.message });
   }
 });
 router.get("/config", (req: Request, res: Response) => {
@@ -667,7 +681,14 @@ router.post("/dismiss-recovery-modal", async (req: Request, res: Response) => {
   }
 });
 
-// Auto-expiry worker for PAYMENT_PENDING orders older than 15 minutes
+/**
+ * Auto-expiry worker for PAYMENT_PENDING orders older than 15 minutes.
+ * 
+ * Why: This acts as the garbage collector for the inventory locking system. 
+ * If a user drops off during payment, their reserved stock remains locked. 
+ * This cron sweeps through expired orders, marks them FAILED, and releases 
+ * the locks so other users can purchase the stock.
+ */
 setInterval(async () => {
   try {
     const expiredOrdersQuery = await pool.query(
@@ -734,9 +755,9 @@ router.post("/retry-check", async (req: Request, res: Response) => {
     }
 
     return res.json({ success: true, allowed: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Retry check error:", error);
-    return res.status(500).json({ error: "Internal server error during retry check" });
+    return res.status(500).json({ error: "Internal server error during retry check", details: error.message });
   }
 });
 

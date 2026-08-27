@@ -30,18 +30,25 @@ export const PolicyManagerModal: React.FC<PolicyManagerModalProps> = ({
   const [maxDiscount, setMaxDiscount] = useState<number>(15);
   const [loading, setLoading] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
       fetch(`${apiUrl}/api/analytics/policy`)
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) throw new Error();
+          return res.json();
+        })
         .then((data) => {
           if (data.success && data.policy) {
             setMaxDiscount(Number(data.policy.max_discount_pct));
+            setError(null);
+          } else {
+            setError("Failed to load merchant policy.");
           }
         })
-        .catch((err) => console.error("Failed to load merchant policy:", err))
+        .catch(() => setError("Failed to load merchant policy."))
         .finally(() => setLoading(false));
     }
   }, [isOpen, apiUrl]);
@@ -59,10 +66,13 @@ export const PolicyManagerModal: React.FC<PolicyManagerModalProps> = ({
       const data = await res.json();
       if (data.success) {
         setSavedSuccess(true);
+        setError(null);
         setTimeout(() => setSavedSuccess(false), 2500);
+      } else {
+        setError(data.error || "Failed to update policy.");
       }
     } catch (err) {
-      console.error("Failed to update policy:", err);
+      setError("Failed to update policy.");
     } finally {
       setLoading(false);
     }
@@ -123,6 +133,12 @@ export const PolicyManagerModal: React.FC<PolicyManagerModalProps> = ({
           <p style={{ margin: 0, fontSize: 13, color: T.textSecondary, lineHeight: 1.6 }}>
             Set strict boundaries for the autonomous AI checkout engine. The policy engine will dynamically enforce this maximum cap on all bundle discounts.
           </p>
+
+          {error && (
+            <div style={{ background: "#fef2f2", color: "#dc2626", padding: "10px 14px", borderRadius: 8, fontSize: 13, border: "1px solid #fecaca" }}>
+              {error}
+            </div>
+          )}
 
           {/* Policy Controls */}
           <div style={{

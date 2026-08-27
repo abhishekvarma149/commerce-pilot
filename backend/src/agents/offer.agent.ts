@@ -11,14 +11,21 @@ const defaultPolicy: MerchantPolicy = {
   requireApprovalForBundles: true,
 };
 
+export interface OfferData {
+  price: number;
+  discountedFrom?: number;
+  note?: string;
+  [key: string]: unknown;
+}
+
 export interface OfferEvaluationResult {
   approved: boolean;
-  adjustedOffer: any | null;
+  adjustedOffer: OfferData | null;
   policyReason: string;
 }
 
 export const evaluateOfferPolicy = async (
-  growthOffer: any,
+  growthOffer: OfferData | null,
   productPrice: number,
   policy: MerchantPolicy = defaultPolicy
 ): Promise<OfferEvaluationResult> => {
@@ -36,12 +43,15 @@ export const evaluateOfferPolicy = async (
   const discountAmount = originalPrice - offeredPrice;
   const discountPercentage = (discountAmount / originalPrice) * 100;
 
-  console.log(`--> [Offer/Policy Engine] Evaluating discount of ₹${discountAmount} (${discountPercentage.toFixed(1)}%)`);
-
-  // Check against maximum allowed percentage
+  /**
+   * Discount Clamping (Percentage)
+   * 
+   * Why: Prevents LLM hallucinations from giving away products for free or breaking
+   * merchant margins. If the LLM proposes a 50% discount but the policy cap is 15%,
+   * we intercept and automatically adjust the offer price to exactly 15% off.
+   */
   if (discountPercentage > policy.maxDiscountPercentage) {
     const maxAllowedPrice = originalPrice * (1 - policy.maxDiscountPercentage / 100);
-    console.log(`⚠️ Policy Violation: Discount exceeds ${policy.maxDiscountPercentage}%. Adjusting price.`);
 
     return {
       approved: true, // Approved with modification
@@ -54,10 +64,14 @@ export const evaluateOfferPolicy = async (
     };
   }
 
-  // Check against maximum absolute discount value
+  /**
+   * Discount Clamping (Absolute Value)
+   * 
+   * Why: Acts as a secondary safeguard against highly expensive items where a valid
+   * percentage discount might still translate to an unacceptably large monetary loss.
+   */
   if (discountAmount > policy.maxDiscountValue) {
     const maxAllowedPrice = originalPrice - policy.maxDiscountValue;
-    console.log(`⚠️ Policy Violation: Discount value exceeds ₹${policy.maxDiscountValue}. Adjusting price.`);
 
     return {
       approved: true,

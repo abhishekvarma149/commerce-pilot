@@ -120,12 +120,13 @@ export const createProduct = async (
         inventory: inventoryResult.rows[0],
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     await client.query("ROLLBACK");
     console.error("Create product error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to create product",
+      details: error.message
     });
   } finally {
     client.release();
@@ -163,11 +164,12 @@ export const getProducts = async (
       count: result.rows.length,
       products: result.rows,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Get products error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch products",
+      details: error.message
     });
   }
 };
@@ -201,11 +203,12 @@ export const getProduct = async (
       success: true,
       product: result.rows[0],
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Get product error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch product",
+      details: error.message
     });
   }
 };
@@ -340,12 +343,13 @@ export const updateProduct = async (
       success: true,
       product: finalResult.rows[0] ?? productResult.rows[0],
     });
-  } catch (error) {
+  } catch (error: any) {
     await client.query("ROLLBACK");
     console.error("Update product error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to update product",
+      details: error.message
     });
   } finally {
     client.release();
@@ -380,11 +384,12 @@ export const deleteProduct = async (
       success: true,
       message: "Product deleted successfully",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Delete product error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to delete product",
+      details: error.message
     });
   }
 };
