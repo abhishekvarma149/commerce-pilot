@@ -200,8 +200,7 @@ Retry is never a blind resume — price and stock are re-derived from the databa
 ## 📸 Screenshots
 
 **Negotiation clamped to the policy ceiling** — the buyer asks for 30% off; the Growth Agent negotiates but the Policy Engine clamps the accessory-bundle discount to the 20% authorized maximum, and the bundle stays visible in the side panel with the enforced price.
-![Upsell negotiation clamped to policy limit](<img width="1440" height="900" alt="upsell" src="https://github.com/user-attachments/assets/d2b52aed-0fc1-4121-8312-567485af30f1" />
-)
+![Upsell negotiation clamped to policy limit](./assets/upsell.png)
 
 **Immutable audit trail (live)** — the Decision & Payment Audit Log drawer, showing `PAYMENT_VERIFIED`, a recovery event, and `POLICY_BREAKDOWN_GENERATED` with the actual `basePrice` / `finalTotal` / `upsellPrice` breakdown, each tagged with its acting agent.
 ![Audit trail drawer](<img width="1439" height="896" alt="audit-log" src="https://github.com/user-attachments/assets/e91f64b4-a2a5-4c89-bbec-cd8d2249a097" />
