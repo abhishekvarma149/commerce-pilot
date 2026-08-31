@@ -179,7 +179,6 @@ curl -X POST http://localhost:8000/api/checkout/create-order \
 Retry is never a blind resume — price and stock are re-derived from the database every time, including on retry, so a stale or tampered client state can never slip through.
 
 ---
-
 ## 📋 Audit Trail Event Reference
 
 | Event | Meaning |
@@ -188,12 +187,10 @@ Retry is never a blind resume — price and stock are re-derived from the databa
 | `POLICY_BREAKDOWN_GENERATED` | Itemized price breakdown calculated and locked server-side |
 | `POLICY_VIOLATION_BLOCKED` | Requested discount exceeded the 20% ceiling; clamped and logged |
 | `CHECKOUT_INITIATED` | Gated order token generated and linked to the active session |
-| `MODAL_DISMISSED_OR_DROPPED` | Gateway closed before authorization; order held as `PAYMENT_PENDING` |
+| `RECOVERY_MODAL_DISMISSED` | Gateway closed before authorization; order held as `PAYMENT_PENDING` |
 | `PAYMENT_RETRY_INITIATED` | Resume triggered; price and stock re-verified against PostgreSQL |
 | `PAYMENT_VERIFIED` | HMAC signature confirmed; order marked `PAID`, invoice generated |
 | `PAYMENT_LOCK_EXPIRED` | Order transitioned to `FAILED` after the 15-minute inactivity TTL |
-
-> ⚠️ **Naming check:** the live Audit Log currently emits `RECOVERY_MODAL_DISMISSED` for a dropped checkout (see screenshot above), while this table lists it as `MODAL_DISMISSED_OR_DROPPED`. Align these — either rename the emitted event or update this table — before submission so the docs and the running system agree.
 
 ---
 
