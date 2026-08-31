@@ -203,11 +203,11 @@ Retry is never a blind resume — price and stock are re-derived from the databa
 ![Upsell negotiation clamped to policy limit](./assets/upsell.png)
 
 **Immutable audit trail (live)** — the Decision & Payment Audit Log drawer, showing `PAYMENT_VERIFIED`, a recovery event, and `POLICY_BREAKDOWN_GENERATED` with the actual `basePrice` / `finalTotal` / `upsellPrice` breakdown, each tagged with its acting agent.
-![Audit trail drawer](<img width="1439" height="896" alt="audit-log" src="https://github.com/user-attachments/assets/e91f64b4-a2a5-4c89-bbec-cd8d2249a097" />
+![Audit trail drawer](./assets/audit-log.png
 )
 
 **Graceful failure recovery** — a dropped payment lands in `PAYMENT_PENDING` under Orders & Tax Receipts, with the price locked and a one-click "Retry Payment" action at the original amount.
-![Retry payment after a dropped checkout](<img width="1440" height="900" alt="retry-payment" src="https://github.com/user-attachments/assets/e7a60553-12ca-44bb-9779-1b8cbe37ba3f" />
+![Retry payment after a dropped checkout](./assets/retry-payment.png
 )
 
 ---
