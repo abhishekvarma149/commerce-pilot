@@ -4,7 +4,7 @@
 > *Grow the merchant's revenue, and make them sellable to AI buyers — with bounded, explainable, and gated execution.*
 
 🎥 **Demo Video:** [ADD YOUTUBE/GOOGLE DRIVE LINK HERE]
-🔗 **Live Repo:** [ADD REAL GITHUB URL HERE]
+🔗 **Live Repo:** https://github.com/abhishekvarma149/commerce-pilot.git
 📸 **Screenshots:** [jump to Screenshots](#-screenshots)
 
 ---
