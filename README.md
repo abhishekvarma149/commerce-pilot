@@ -3,7 +3,7 @@
 > **Track 01:** AI Growth & Agentic Commerce
 > *Grow the merchant's revenue, and make them sellable to AI buyers — with bounded, explainable, and gated execution.*
 
-🎥 **Demo Video:** [ADD YOUTUBE/GOOGLE DRIVE LINK HERE]
+🎥 **Demo Video:** https://youtu.be/yZ2b29nD-oE
 🔗 **Live Repo:** https://github.com/abhishekvarma149/commerce-pilot.git
 📸 **Screenshots:** [jump to Screenshots](#-screenshots)
 
