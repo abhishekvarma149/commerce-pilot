@@ -237,7 +237,7 @@ NPCI's UAP and the global protocol race (ACP, AP2, x402) are converging on the s
 
 ### 1. Clone & Install
 ```bash
-git clone [ADD REAL GITHUB URL HERE]
+git clone https://github.com/abhishekvarma149/commerce-pilot.git
 cd commerce-pilot
 
 npm install
